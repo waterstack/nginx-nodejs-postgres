@@ -3,7 +3,7 @@ import express from 'express';
 import tomlParser from 'toml';
 import fileSystem from 'fs';
 import createDebug from 'debug';
-import {Pool as PgPool, Client as PgClient}from 'pg';
+import {Pool as PgPool, Client as PgClient} from 'pg';
 import {RDBMSPooling} from './models/RDBMSPooling.js';
 const PORT = 3000;
 const app = express();
@@ -12,10 +12,7 @@ const debug_gen = createDebug('wbapp:gen');
 const debug_io  = createDebug('wbapp:io');
 const debug_net = createDebug('wbapp:net');
 
-
 globalThis.defObj = tomlParser.parse(fileSystem.readFileSync('./src/config/def.toml'));
-console.log('defObj', defObj);
-
 
 /*
     RDBMS コネクションプーリング
@@ -51,7 +48,13 @@ app.get('/', async (req, res) => {
     const errArr = [], nowDate = new Date();
     let dbVal, retStr;
 
-    console.log('request comming', req.query && req.query['cid'] );
+    let dateStr = '' + nowDate.getFullYear();
+    dateStr += '-' + ( '' + (nowDate.getMonth() + 1) ).padStart(2, '0');
+    dateStr += '-' + ( '' + nowDate.getDate() ).padStart(2, '0');
+    dateStr += ' ' + ( '' + nowDate.getHours() ).padStart(2, '0');
+    dateStr += ':' + ( '' + nowDate.getMinutes() ).padStart(2, '0');
+    dateStr += ':' + ( '' + nowDate.getSeconds() ).padStart(2, '0');
+    console.log(`request comming ${dateStr}`);
     try {
         let sql = `SELECT user_id, name, email
                    FROM LoginUsers
@@ -65,8 +68,8 @@ app.get('/', async (req, res) => {
 
     // retStr
     if( errArr.length === 0 ){
-        retStr = `<div>Hello from express (ESM) 2025-12-26 14:49 !</div>
-                    <div>${nowDate.getFullYear()}-${nowDate.getMonth() + 1}-${nowDate.getDate()} ${nowDate.getHours()}:${nowDate.getMinutes()}:${nowDate.getSeconds()}</div>
+        retStr = `<div>Hello from express (ESM)!</div>
+                    <div>${dateStr}</div>
                     <div>`;
     
         for(const row of dbVal.rows){
@@ -137,6 +140,5 @@ app.post('/users', express.json(), async (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Server running at localhost:${PORT} on ${new Date().toLocaleTimeString()}`);
+    console.log(`Server running at localhost:${PORT} dev = ${globalThis.defObj.dev}, admin_cid = ${globalThis.defObj.cache.admin_cid} on ${new Date().toLocaleTimeString()}`);
 });
-
