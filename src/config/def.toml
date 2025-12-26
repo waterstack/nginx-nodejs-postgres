@@ -1,0 +1,33 @@
+# Webアプリ設定ファイル
+
+version = "0.0.1"
+host = "ct-node"
+protocol = "http"
+port = 3000
+homeDir = "/home/node/"
+appDir =  "/home/node/src/"
+salt = "<:ソルト>"  # パスワード用のソルト
+sessTimeoutSec = 43200
+dev = true   # true: 開発サイト, false: 本番サイト
+
+[rdbms]
+db = "postgresql"
+log = true
+user = "ca2024"
+host = "ct-postgres"
+database = "ca2024"
+password = "1940dcakAosu"
+port = 5432
+pooling = true
+
+[redis]
+host = "127.0.0.1"
+port = 6379
+dbNo = 3
+
+[cache]            # 主にHTMLファイルから読み込むCSS, JavaScriptのキャッシュコントールに使用
+admin_cid = "20240418"
+user_cid = "20240418"
+
+[nodejs] # Node.jsの情報
+binPath = "/usr/local/bin/node"

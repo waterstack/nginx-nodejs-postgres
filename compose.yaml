@@ -1,0 +1,33 @@
+services:
+  app:
+    container_name: ct-node
+    environment:
+      - TZ=Asia/Tokyo
+    volumes:
+      - type: bind
+        source: ./src
+        target: /home/node/src
+    image: node:24-web
+  web-server:
+    container_name: ct-nginx
+    ports:
+      - "8081:80"
+    volumes:
+      - type: bind
+        source: ./etc/nginx/conf.d
+        target: /etc/nginx/conf.d
+    image: nginx:1.29.3
+  db:
+    image: postgres:18.1
+    container_name: ct-postgres
+    environment:
+      POSTGRES_PASSWORD: t1234admin
+    volumes:
+      - type: volume
+        source: postgres3-db
+        target: /var/lib/postgresql
+      - type: bind
+        source: ./src
+        target: /home
+volumes:
+  postgres3-db:

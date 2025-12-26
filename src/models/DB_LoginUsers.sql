@@ -1,0 +1,1 @@
+INSERT INTO loginusers(name, email) VALUES('豊臣秀吉', 'hideyoshi@example.com');
