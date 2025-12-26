@@ -21,9 +21,9 @@ port = 5432
 pooling = true
 
 [redis]
-host = "127.0.0.1"
+host = "ct-redis"
 port = 6379
-dbNo = 3
+dbNo = 0
 
 [cache]            # 主にHTMLファイルから読み込むCSS, JavaScriptのキャッシュコントールに使用
 admin_cid = "20240418"

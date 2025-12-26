@@ -4,7 +4,13 @@ import tomlParser from 'toml';
 import fileSystem from 'fs';
 import createDebug from 'debug';
 import {Pool as PgPool, Client as PgClient} from 'pg';
+import Redis from 'ioredis';
 import {RDBMSPooling} from './models/RDBMSPooling.js';
+
+globalThis.defObj = tomlParser.parse(fileSystem.readFileSync('./src/config/def.toml'));
+const redis = new Redis({'host': globalThis.defObj.redis.host, 'port': globalThis.defObj.redis.port, 'db': globalThis.defObj.redis.dbNo});
+
+
 const PORT = 3000;
 const app = express();
 
@@ -12,7 +18,6 @@ const debug_gen = createDebug('wbapp:gen');
 const debug_io  = createDebug('wbapp:io');
 const debug_net = createDebug('wbapp:net');
 
-globalThis.defObj = tomlParser.parse(fileSystem.readFileSync('./src/config/def.toml'));
 
 /*
     RDBMS コネクションプーリング
@@ -46,7 +51,7 @@ app.use(express.urlencoded( {extended: true}));
 
 app.get('/', async (req, res) => {
     const errArr = [], nowDate = new Date();
-    let dbVal, retStr;
+    let dbVal, retStr, access_num = 0;
 
     let dateStr = '' + nowDate.getFullYear();
     dateStr += '-' + ( '' + (nowDate.getMonth() + 1) ).padStart(2, '0');
@@ -60,6 +65,7 @@ app.get('/', async (req, res) => {
                    FROM LoginUsers
                    ORDER by user_id DESC`;
         dbVal = await res.locals.rdb.run(sql, []);
+        access_num = await redis.get('access_counter');
     } catch(err){
         errArr.push(err.message);
     } finally {
@@ -75,6 +81,7 @@ app.get('/', async (req, res) => {
         for(const row of dbVal.rows){
             retStr+= `<div>${row['user_id']} / ${row['name']} / ${row['email']}</div>`;
         }
+        retStr+= `<div>アクセス数: ${access_num}</div>`;
         retStr+= '</div>';
     }
 
@@ -135,6 +142,32 @@ app.post('/users', express.json(), async (req, res) => {
         out['errArr'] = errArr;
     } else {
         out['user_id'] = user_id;
+    }
+    res.json(out);
+});
+
+/**
+ * アクセス数増加
+ */
+app.post('/access', express.json(), async(req, res) => {
+    const errArr = [];
+    let incrBy = 1;
+
+    if( req.body && req.body['incrBy'] && Number.isInteger(req.body['incrBy']) ){
+        incrBy = Number.parseInt(req.body['incrBy'], 10);
+    }
+
+    try {
+        await redis.incrby('access_counter', incrBy);
+    } catch(err){
+        errArr.push(err.message);
+    }
+    
+    const out = {};
+    if(errArr.length){
+        out['errArr'] = errArr;
+    } else {
+        out['incrBy'] = incrBy;
     }
     res.json(out);
 });

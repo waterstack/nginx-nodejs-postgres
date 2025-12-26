@@ -29,5 +29,8 @@ services:
       - type: bind
         source: ./src
         target: /home
+  kvs:
+    container_name: ct-redis
+    image: redis:8.2.3-alpine
 volumes:
   postgres3-db:

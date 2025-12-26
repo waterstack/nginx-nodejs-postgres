@@ -12,6 +12,7 @@
   "dependencies": {
     "debug": "^4.4.3",
     "express": "^5.2.1",
+    "ioredis": "^5.8.2",
     "pg": "^8.16.3",
     "toml": "^3.0.0"
   }
