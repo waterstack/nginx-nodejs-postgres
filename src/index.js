@@ -1,5 +1,4 @@
 "use strict";
-
 import express from 'express';
 import tomlParser from 'toml';
 import fileSystem from 'fs';
@@ -12,7 +11,6 @@ const app = express();
 const debug_gen = createDebug('wbapp:gen');
 const debug_io  = createDebug('wbapp:io');
 const debug_net = createDebug('wbapp:net');
-
 
 
 globalThis.defObj = tomlParser.parse(fileSystem.readFileSync('./src/config/def.toml'));
@@ -67,7 +65,7 @@ app.get('/', async (req, res) => {
 
     // retStr
     if( errArr.length === 0 ){
-        retStr = `<div>Hello from express (ESM) 2025-12-26 14:49!</div>
+        retStr = `<div>Hello from express (ESM) 2025-12-26 14:49 !</div>
                     <div>${nowDate.getFullYear()}-${nowDate.getMonth() + 1}-${nowDate.getDate()} ${nowDate.getHours()}:${nowDate.getMinutes()}:${nowDate.getSeconds()}</div>
                     <div>`;
     
