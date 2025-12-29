@@ -1,0 +1,18 @@
+<div>
+  <h1>Hello from express (ESM)!</h1>
+  <% if(errMsg){ %>
+    <div><%= errMsg %></div>
+  <% } else { %>
+    <div>
+      <div><%= data.dateStr %></div>
+      <div>
+      <% data.dbVal.rows.forEach( (row) => { %>
+        <div><%= row['user_id'] %> / <%= row['name'] %> / <%= row['email'] %></div>
+      <% }) %>
+      </div>
+      <div>トータルアクセス数: <%= data.access_num %></div>
+      <div>個人アクセス数: <%= data.session.counter %></div>
+      <div>個人名: <%= data.session.user_name %></div>
+    </div>
+  <% } %>
+</div>

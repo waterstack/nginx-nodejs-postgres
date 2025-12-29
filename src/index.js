@@ -4,12 +4,14 @@ import tomlParser from 'toml';
 import fileSystem from 'fs';
 import createDebug from 'debug';
 import {Pool as PgPool, Client as PgClient} from 'pg';
-import Redis from 'ioredis';
+import {createClient} from 'redis';
+import expressLayouts from 'express-ejs-layouts';
+import exSession from 'express-session';
+import {RedisStore} from 'connect-redis';
+
 import {RDBMSPooling} from './models/RDBMSPooling.js';
 
-globalThis.defObj = tomlParser.parse(fileSystem.readFileSync('./src/config/def.toml'));
-const redis = new Redis({'host': globalThis.defObj.redis.host, 'port': globalThis.defObj.redis.port, 'db': globalThis.defObj.redis.dbNo});
-
+globalThis.defObj = tomlParser.parse(fileSystem.readFileSync('./config/def.toml'));
 
 const PORT = 3000;
 const app = express();
@@ -18,10 +20,11 @@ const debug_gen = createDebug('wbapp:gen');
 const debug_io  = createDebug('wbapp:io');
 const debug_net = createDebug('wbapp:net');
 
-
 /*
-    RDBMS コネクションプーリング
+    ルーティング処理前に実行されるミドルウェアs
 */
+
+// RDBMS コネクションプーリング
 const pgPoolInstance = new PgPool({
      user: globalThis.defObj.rdbms.user
     ,host: globalThis.defObj.rdbms.host
@@ -32,10 +35,6 @@ const pgPoolInstance = new PgPool({
     ,idleTimeoutMillis: 20000
     ,connectionTimeoutMillis: 3000
 });
-
-/*
-    ルーティング処理前に実行されるミドルウェア
-*/
 app.use((req, res, next) => {
     const rdb = new RDBMSPooling({
          "db":  globalThis.defObj.rdbms.db
@@ -47,10 +46,31 @@ app.use((req, res, next) => {
    next();
 });
 
+// セッション
+    const redis = createClient({
+        url: `redis://${globalThis.defObj.redis.host}:${globalThis.defObj.redis.port}/${globalThis.defObj.redis.dbNo}`
+    });
+    redis.connect().catch(console.error);
+    const redisStore = new RedisStore({ client: redis, prefix: "WEBSESSID:"});
+    app.use(exSession({
+        store: redisStore,
+        resave: false,
+        saveUninitialized: false,
+        secret: 'mKx3ABGUh4',
+    }));
+
+// POST form
 app.use(express.urlencoded( {extended: true}));
 
+// ejs
+app.set('view engine', 'ejs');
+app.use(expressLayouts);
+
+/**
+ * ルーティング
+ */
 app.get('/', async (req, res) => {
-    const errArr = [], nowDate = new Date();
+    const errArr = [], nowDate = new Date(), sessObj = {};
     let dbVal, retStr, access_num = 0;
 
     let dateStr = '' + nowDate.getFullYear();
@@ -65,33 +85,30 @@ app.get('/', async (req, res) => {
                    FROM LoginUsers
                    ORDER by user_id DESC`;
         dbVal = await res.locals.rdb.run(sql, []);
-        access_num = await redis.get('access_counter');
+        access_num = await redis.incr('access_counter');
     } catch(err){
         errArr.push(err.message);
     } finally {
         res.locals.rdb.end();
     }
 
-    // retStr
-    if( errArr.length === 0 ){
-        retStr = `<div>Hello from express (ESM)!</div>
-                    <div>${dateStr}</div>
-                    <div>`;
-    
-        for(const row of dbVal.rows){
-            retStr+= `<div>${row['user_id']} / ${row['name']} / ${row['email']}</div>`;
-        }
-        retStr+= `<div>アクセス数: ${access_num}</div>`;
-        retStr+= '</div>';
-    }
-
-    let outStr = '';
-    if( errArr.length ){
-        outStr+= errArr.join(',');
+    // セッション
+    if( req.session && req.session.local && req.session.local.counter){
+        sessObj['counter']   = req.session.local.counter + 1;
+        sessObj['user_name'] = req.session.local.user_name;
     } else {
-        outStr+= retStr;
+        sessObj['counter']   = 1;
+        sessObj['user_name'] = 'alice';
     }
-    res.send(outStr);
+    req.session.local = sessObj;
+
+    // レンダリング
+    const args = {};
+    args.errMsg    = errArr.join("\n");
+    args.pageTitle = 'Docker Compose 確認';
+    args.layout    = 'layouts/layout_general.ejs';
+    args.data      = { dateStr: dateStr, dbVal: dbVal, access_num: access_num, session: req.session.local }
+    res.render('pages/index.ejs', args)
 });
 
 app.post('/users', express.json(), async (req, res) => {
